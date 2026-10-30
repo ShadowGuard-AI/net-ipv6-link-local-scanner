@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 # net-ipv6-link-local-scanner
 Discovers IPv6 link-local addresses on the network and attempts to ping them to identify live hosts on the local link.  Reports MAC address and any responding IPv6 address per host. - Focused on Basic network operations
 
