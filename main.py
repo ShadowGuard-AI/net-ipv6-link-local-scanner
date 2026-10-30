@@ -58,12 +58,12 @@ def generate_link_local_addresses(interface):
     if mac_address:
         try:
             # Convert MAC address to EUI-64 format
-            oui, nic = mac_address.split(":", 3), mac_address.split(":", 3)[3:]
-            eui64 = oui[0] + oui[1] + ":" + oui[2] + "ff:fe" + nic[0] + ":" + nic[1]
-            
+            octets = mac_address.split(":")
+            eui64 = octets[0] + octets[1] + ":" + octets[2] + "ff:fe" + octets[3] + ":" + octets[4] + octets[5]
+
             # Flip the 7th bit of the first octet
-            first_octet_int = int(eui64.split(":")[0], 16) ^ 2
-            eui64_modified = str(hex(first_octet_int)[2:]) + ":" + ":".join(eui64.split(":")[1:])
+            first_octet_int = int(octets[0], 16) ^ 2
+            eui64_modified = ("%02x" % first_octet_int) + eui64[2:]
 
             # Construct the link-local address
             link_local_address = "fe80::" + eui64_modified
