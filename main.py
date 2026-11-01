@@ -37,6 +37,10 @@ def get_mac_address(interface):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack('256s', interface.encode('utf-8')[:15]))
+        # The MAC sits at bytes 18 to 24 of the ifreq the kernel hands
+        # back for SIOCGIFHWADDR (0x8927). That offset is a Linux
+        # struct layout fact, not something the reply labels, and the
+        # name is cut to 15 bytes because that is all the struct holds.
         mac_address = ':'.join('%02x' % b for b in info[18:24])
         return mac_address
     except Exception as e:
@@ -66,6 +70,12 @@ def generate_link_local_addresses(interface):
             eui64_modified = ("%02x" % first_octet_int) + eui64[2:]
 
             # Construct the link-local address
+            # Read what this generator really yields: exactly one
+            # address, built from this machine's own MAC. I never
+            # enumerate the link or ping the all nodes multicast group,
+            # so the scan below pings my own address and a "host found"
+            # line reports this interface, with this interface's MAC.
+            # Despite the name, no neighbour discovery happens here.
             link_local_address = "fe80::" + eui64_modified
 
             yield link_local_address + "%" + interface
@@ -102,6 +112,10 @@ def ping_ipv6(ipv6_address, timeout=1, count=1, verbose=False):
                 logging.debug(f"Ping failed to {ipv6_address}:\n{stderr.decode()}")
             return False
     except FileNotFoundError:
+        # A missing ping6 kills the whole run from inside the ping,
+        # while every other ping failure just returns False above.
+        # On newer systems ping6 is often folded into ping -6, which
+        # this command line never tries.
         logging.error("ping6 command not found.  Please ensure it is installed and in your PATH.")
         sys.exit(1) # Exit due to missing dependency.
     except Exception as e:
@@ -143,6 +157,9 @@ def main():
         sys.exit(1)  # Exit if the interface is invalid.
 
 
+    # Second time this run asks the kernel for the same MAC: the
+    # generator below looks it up again on its own instead of taking
+    # this value as an argument.
     mac_address = get_mac_address(interface)
     if not mac_address:
         logging.error(f"Failed to retrieve MAC address for interface {interface}.  Unable to proceed.")
